@@ -1,0 +1,160 @@
+/* ═══════════════════════════════════════════════════
+   FOREST GREEN THEME — GLOBAL STYLES
+   Palette: Forest Green · Emerald · Gold · Light Mint
+   ═══════════════════════════════════════════════════ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Page background ── */
+.program-bg {
+  background-color: #1e3a28;
+}
+
+/* ── Cards ── */
+.retro-card {
+  background: linear-gradient(180deg, rgba(235,248,239,0.9) 0%, rgba(220,240,228,0.9) 100%);
+  border: 1px solid rgba(100,180,130,0.3);
+  border-left: 4px solid #27ae60;
+  border-radius: 10px;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 4px 14px rgba(39,174,96,0.06);
+  animation: fadeIn 0.2s ease;
+}
+
+/* ── Team buttons ── */
+.team-btn {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  cursor: pointer;
+}
+.team-btn:hover {
+  transform: scale(1.02);
+  box-shadow: inset 0 0 0 2px #27ae60;
+}
+.team-btn:active {
+  transform: scale(0.98);
+}
+
+/* ── Inputs & selects ── */
+input, select {
+  background: #f0f5f1 !important;
+  color: #162216 !important;
+  border: 1px solid #c2d4c4 !important;
+  border-bottom: 2px solid #a8c4ac !important;
+  border-radius: 8px !important;
+  padding: 10px 14px !important;
+  font-family: 'Barlow Condensed', sans-serif !important;
+  font-size: 17px !important;
+  font-weight: 500 !important;
+  outline: none !important;
+  width: 100% !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
+}
+input:focus, select:focus {
+  border-color: #27ae60 !important;
+  border-bottom-color: #27ae60 !important;
+  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.12) !important;
+}
+input::placeholder {
+  color: #6a9b78 !important;
+}
+
+/* ── PIN input ── */
+.pin-input {
+  font-family: 'Share Tech Mono', monospace !important;
+  font-size: 30px !important;
+  letter-spacing: 14px !important;
+  text-align: center !important;
+  color: #0e7340 !important;
+  background: #fff !important;
+  border: 2px solid #27ae60 !important;
+  border-bottom: 2px solid #27ae60 !important;
+  padding: 14px !important;
+  border-radius: 10px !important;
+}
+.pin-input:focus {
+  box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.12) !important;
+}
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes champGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(39,174,96,0.2); }
+  50%      { box-shadow: 0 0 30px rgba(39,174,96,0.45); }
+}
+
+/* ── Section rule divider ── */
+.section-rule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-rule::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, #27ae60, transparent);
+}
+
+/* ── Live badge ── */
+.live-badge {
+  background: #27ae60;
+  color: #fff;
+  padding: 3px 10px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  font-family: 'Share Tech Mono', monospace;
+  animation: pulse 1.5s infinite;
+  border-radius: 10px;
+}
+
+/* ── Table row hover ── */
+tbody tr:hover td {
+  background: rgba(39, 174, 96, 0.05) !important;
+  cursor: pointer;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #1e3a28; }
+::-webkit-scrollbar-thumb { background: #7ab892; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #5aa878; }
+
+/* ── Points progress bar ── */
+.pts-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: #e4ede6;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.pts-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* ── Tab nav — mobile spacing ── */
+@media (max-width: 640px) {
+  .tab-btn {
+    padding: 10px 10px !important;
+    font-size: 13px !important;
+    letter-spacing: 1px !important;
+  }
+}
