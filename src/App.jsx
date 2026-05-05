@@ -18,20 +18,42 @@ const CHAT_NAME_KEY = "lax_chat_name";
 
 /* ── EmailJS Config ── */
 const EMAILJS_SERVICE_ID = "service_m1c3jet";
-const EMAILJS_TEMPLATE_ID = "template_d3ndh6v";
+const EMAILJS_TEMPLATE_ID = "template_h3iyw4n";
 const EMAILJS_PUBLIC_KEY = "mygZSHcNMwpngL4Ya";
 emailjs.init(EMAILJS_PUBLIC_KEY);
 
 const YEAR = 2026;
 const NCAA_API = `https://ncaa-api.henrygd.me/brackets/lacrosse-men/d1/${YEAR}`;
-const API_PROXIES = [
-  "https://gentle-brook-645cs.drpync.workers.dev/",
-];
+
+// Fetch with a hard timeout so a slow/hanging proxy never blocks the app
+// Fetch JSON with a hard deadline covering BOTH headers AND body streaming.
+// The abort signal stays armed until r.json() finishes, so a stalled body
+// is cancelled just like a stalled connection.
+async function fetchJSON(url, ms=8000){
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),ms);
+  try{
+    const r=await fetch(url,{signal:ctrl.signal});
+    if(!r.ok) throw new Error(r.status);
+    const data=await r.json();      // abort still active here
+    clearTimeout(tid);
+    return data;
+  }catch(e){clearTimeout(tid);throw e;}
+}
+
 async function fetchNCAA(){
-  for(const url of API_PROXIES){
-    try{const r=await fetch(url);if(r.ok)return r.json();}catch{}
-  }
+  // 1. Dedicated Cloudflare Worker — fast edge cache, set after deploying worker/index.js
+  const WORKER = "https://lax-proxy.drpync.workers.dev/";
+  try{return await fetchJSON(WORKER);}catch{}
+  // 2. allorigins public CORS proxy (~5-6 s, used as fallback)
+  const proxied=`https://api.allorigins.win/raw?url=${encodeURIComponent(NCAA_API)}`;
+  try{return await fetchJSON(proxied);}catch{}
   return null;
+}
+
+// Wrap any promise with a hard timeout that resolves to `fallback` instead of hanging.
+function withTimeout(p,ms,fallback){
+  return Promise.race([p,new Promise(r=>setTimeout(()=>r(fallback),ms))]);
 }
 
 const POINTS = [0,1,1,1,1,1,1,1,1,2,2,2,2,4,4,8];
@@ -57,18 +79,27 @@ const POS_TO_GAME = {
  * Once the API returns teams for these games, the actual opponent is shown.
  */
 const BRACKET = {
-  1: {top:"Princeton",      seedTop:1, bottom:null,    openingCandidates:["Marist","Stony Brook"]},
-  2: {top:"Penn St.",       seedTop:8, bottom:"Army West Point"},
-  3: {top:"Virginia",       seedTop:5, bottom:"Georgetown"},
-  4: {top:"Richmond",       seedTop:4, bottom:"Duke"},
-  5: {top:"Notre Dame",     seedTop:2, bottom:null,    openingCandidates:["Robert Morris","Jacksonville"]},
-  6: {top:"Cornell",        seedTop:7, bottom:"Johns Hopkins"},
-  7: {top:"Syracuse",       seedTop:6, bottom:"Yale"},
-  8: {top:"North Carolina", seedTop:3, bottom:"UAlbany"},
-  9:{from:[1,2]}, 10:{from:[3,4]}, 11:{from:[5,6]}, 12:{from:[7,8]},
-  13:{from:[9,10]}, 14:{from:[11,12]},
+  1: {top:"Princeton",      seedTop:1,  bottom:null,              openingCandidates:["Marist","Stony Brook"],  openingSeeds:[16,16]},
+  2: {top:"Penn St.",       seedTop:8,  bottom:"Army West Point", seedBottom:9},
+  3: {top:"Virginia",       seedTop:5,  bottom:"Georgetown",      seedBottom:12},
+  4: {top:"Richmond",       seedTop:4,  bottom:"Duke",            seedBottom:13},
+  5: {top:"Notre Dame",     seedTop:2,  bottom:null,              openingCandidates:["Robert Morris","Jacksonville"], openingSeeds:[15,15]},
+  6: {top:"Cornell",        seedTop:7,  bottom:"Johns Hopkins",   seedBottom:10},
+  7: {top:"Syracuse",       seedTop:6,  bottom:"Yale",            seedBottom:11},
+  8: {top:"North Carolina", seedTop:3,  bottom:"UAlbany",         seedBottom:14},
+  9:{from:[1,2]},10:{from:[3,4]},11:{from:[5,6]},12:{from:[7,8]},
+  13:{from:[9,10]},14:{from:[11,12]},
   15:{from:[13,14]},
 };
+
+// Seed lookup — built automatically from BRACKET so seeds travel with teams in later rounds
+const TEAM_SEEDS = {};
+for(const cfg of Object.values(BRACKET)){
+  if(cfg.top    && cfg.seedTop)    TEAM_SEEDS[cfg.top]    = cfg.seedTop;
+  if(cfg.bottom && cfg.seedBottom) TEAM_SEEDS[cfg.bottom] = cfg.seedBottom;
+  if(cfg.openingCandidates && cfg.openingSeeds)
+    cfg.openingCandidates.forEach((t,i)=>{ if(cfg.openingSeeds[i]) TEAM_SEEDS[t]=cfg.openingSeeds[i]; });
+}
 
 /* ESPN CDN logos — errors are handled gracefully (shows empty span) */
 const LOGOS = {
@@ -113,7 +144,7 @@ const MOCK_ENTRIES = [
    picks:{1:"Princeton",2:"Army West Point",3:"Georgetown",4:"Duke",5:"Notre Dame",6:"Johns Hopkins",7:"Yale",8:"UAlbany",
           9:"Princeton",10:"Georgetown",11:"Notre Dame",12:"Yale",13:"Princeton",14:"Notre Dame",15:"Notre Dame"}},
   {name:"Sara's Bracket", email:"sara@example.com",  tiebreak:14, submittedAt:"2026-05-05T09:15:00Z", pin:"9012",
-   picks:{1:"Marist",2:"Penn St.",3:"Virginia",4:"Richmond",5:"Robert Morris",6:"Cornell",7:"Syracuse",8:"North Carolina",
+   picks:{1:"Marist/Stony Brook",2:"Penn St.",3:"Virginia",4:"Richmond",5:"Robert Morris/Jacksonville",6:"Cornell",7:"Syracuse",8:"North Carolina",
           9:"Penn St.",10:"Virginia",11:"Cornell",12:"Syracuse",13:"Virginia",14:"Cornell",15:"Cornell"}},
 ];
 const MOCK_RESULTS = {
@@ -190,7 +221,7 @@ function scoreEntry(entry,results){
   let total=0,max=0; const d={};
   for(let g=1;g<=15;g++){
     const pick=entry.picks[g],r=results[g],pts=POINTS[g];
-    if(r?.winner){const c=eq(pick,r.winner);d[g]={pick,correct:c,pts:c?pts:0};if(c)total+=pts;}
+    if(r?.winner){const c=pick?.includes("/")?pick.split("/").some(t=>eq(t,r.winner)):eq(pick,r.winner);d[g]={pick,correct:c,pts:c?pts:0};if(c)total+=pts;}
     else{d[g]={pick,correct:null,pts:0};if(!elim.has(norm(pick)))max+=pts;}
   }
   return{total,maxPossible:total+max,details:d};
@@ -209,6 +240,13 @@ function getEliminated(results){
           if(!r.teams.some(t=>eq(t,c)))s.add(norm(c));
         }
       }
+    }
+  }
+  // Add combined opening-round pick strings to eliminated once all their parts are out
+  for(const cfg of Object.values(BRACKET)){
+    if(cfg.openingCandidates){
+      const combined=norm(cfg.openingCandidates.join("/"));
+      if(cfg.openingCandidates.every(c=>s.has(norm(c)))) s.add(combined);
     }
   }
   return s;
@@ -267,6 +305,7 @@ async function sendBracketEmail(entry,isEdit=false){
   try{
     const p=entry.picks||{};
     await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,{
+      pool_name: "Lax Pool 2026",
       bracket_name: entry.name,
       submitter_email: entry.email,
       champion: p[15]||"N/A",
@@ -544,8 +583,8 @@ export default function App(){
     if(initialLoad.current)setLoading(true);
     try{
       const[ents,res]=await Promise.all([
-        loadEntries(),
-        fetchNCAA().then(d=>parseAPI(d||{}).results).catch(()=>({})),
+        withTimeout(loadEntries(),10000,[]),
+        withTimeout(fetchNCAA().then(d=>parseAPI(d||{}).results).catch(()=>({})),10000,{}),
       ]);
       setEntries(ents); setResults(res); setLastFetch(new Date());
     }catch{}finally{setLoading(false);initialLoad.current=false;}
@@ -621,7 +660,7 @@ export default function App(){
         <div style={{maxWidth:1340,margin:"0 auto",padding:"18px 24px"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,paddingBottom:4}}>
             <div onClick={()=>setView(started?"master":"bracket")} style={{fontFamily:FONTS.display,fontSize:38,lineHeight:1,color:"#fff",letterSpacing:"2px",cursor:"pointer"}}>
-              M LAX {YEAR}
+              LAX POOL {YEAR}
             </div>
             {anyLive&&<span className="live-badge">● LIVE</span>}
           </div>
@@ -944,7 +983,8 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
     const rw=results[gameNum]?.winner;
     const isRound1=gameNum<=8;
     const isEliminated=eliminated.has(norm(team));
-    const correct=rw&&eq(team,rw);
+    const combinedParts=team.includes("/")?team.split("/"):null;
+    const correct=rw&&(combinedParts?combinedParts.some(t=>eq(t,rw)):eq(team,rw));
     const feederGame=!isRound1?BRACKET[gameNum]?.from?.find(f=>eq(picks[f],team)):null;
     const feederWinner=feederGame?results[feederGame]?.winner:null;
     const feederPlayed=!!feederWinner;
@@ -960,7 +1000,9 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
       else if(isSelected){bg=C.navyBg;border=C.navyBorder;color=C.navy;weight=700;}
     } else if(!noPickColors){
       if(teamMadeItHere)              {bg=C.greenBg;border=C.greenBorder;color=C.green;}
-      else if(feederPlayed||deadPick)  {bg=C.redBg;border=C.redBorder;color:C.red;}
+      else if(feederPlayed||deadPick)  {bg=C.redBg;border=C.redBorder;color=C.red;}
+      // Interactive pick mode: use opaque white so text is readable on dark field background
+      else if(interactive)             {bg=C.bgCard;border=C.navyBorder;color=C.text;weight=600;}
       else                             {bg=C.navyBg;border=C.navyBorder;color=C.navy;weight=700;}
     }
     if(!isRound1&&rw){weight=correct?700:400;}
@@ -979,8 +1021,19 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
       }}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{display:"flex",alignItems:"center",gap:6}}>
-            <TeamLogo team={team} size={18} style={{filter:logoFilter}}/>
-            {seed!=null&&seed<=4&&<span style={{color:C.gold,fontSize:12,fontWeight:800,fontFamily:FONTS.mono,minWidth:16}}>{seed}</span>}
+            {combinedParts?(
+              <span style={{display:"flex",alignItems:"center",gap:3}}>
+                {combinedParts.map((t,i)=>(
+                  <span key={t} style={{display:"flex",alignItems:"center",gap:2}}>
+                    {i>0&&<span style={{color:C.textLight,fontSize:11,fontWeight:600}}>/</span>}
+                    <TeamLogo team={t} size={16} style={{filter:logoFilter}}/>
+                  </span>
+                ))}
+              </span>
+            ):(
+              <TeamLogo team={team} size={18} style={{filter:logoFilter}}/>
+            )}
+            {seed!=null&&<span style={{color:seed<=8?C.gold:C.textLight,fontSize:seed<=8?12:11,fontWeight:seed<=8?800:600,fontFamily:FONTS.mono,minWidth:16}}>{seed}</span>}
             <span style={{textDecoration:strikeThrough?"line-through":"none",opacity:dim?0.4:1}}>{team}</span>
             {pickPct[gameNum]?.[team]!=null&&(
               <span style={{fontSize:11,fontWeight:600,fontFamily:FONTS.mono,color:C.textLight,opacity:dim?0.4:1}}>
@@ -996,6 +1049,9 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
             {!noPickColors&&!isRound1&&(deadPick||(feederPlayed&&!teamMadeItHere))&&<span style={{color:C.red,fontSize:12}}>✗</span>}
           </span>
         </div>
+        {combinedParts&&isRound1&&(
+          <div style={{fontSize:10,color:C.textLight,fontFamily:FONTS.mono,letterSpacing:1,marginTop:2}}>OPENING RD · MAY 6</div>
+        )}
         {!noPickColors&&!isRound1&&feederPlayed&&!teamMadeItHere&&feederWinner&&(
           <div style={{
             marginTop:3,paddingTop:3,borderTop:`1px solid ${C.border}`,
@@ -1014,6 +1070,7 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
     const cfg=BRACKET[g]; const r=results[g];
     let top,bottom,seedT,seedB;
     let bottomCandidates=null;
+    const openingSeeds=cfg?.openingSeeds||[];
 
     if(g<=8){
       top=cfg.top; seedT=cfg.seedTop;
@@ -1036,6 +1093,8 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
     } else {
       const[f1,f2]=cfg.from;
       top=picks[f1]||null; bottom=picks[f2]||null;
+      seedT=top?TEAM_SEEDS[top]??null:null;
+      seedB=bottom?TEAM_SEEDS[bottom]??null:null;
     }
 
     return(
@@ -1043,7 +1102,7 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
         <div style={{
           fontSize:12,fontWeight:700,letterSpacing:"1.5px",marginBottom:3,
           display:"flex",justifyContent:"space-between",alignItems:"center",
-          fontFamily:FONTS.mono,textTransform:"uppercase",color:C.textLight,
+          fontFamily:FONTS.mono,textTransform:"uppercase",color:"rgba(255,255,255,0.75)",
         }}>
           <span>{POINTS[g]}PT</span>
           {r?.live&&<span style={{display:"flex",alignItems:"center",gap:3}}>
@@ -1054,21 +1113,14 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
         </div>
         <Team team={top} seed={seedT} gameNum={g} scoreVal={r?.scores?.[0]}/>
         {bottomCandidates?(
-          <div>
-            {bottomCandidates.map(c=>(
-              <Team key={c} team={c} seed={null} gameNum={g} scoreVal={null}/>
-            ))}
-            <div style={{fontSize:10,color:C.textLight,fontFamily:FONTS.mono,letterSpacing:1,marginTop:2,textAlign:"center",paddingBottom:2}}>
-              OPENING RD · MAY 6
-            </div>
-          </div>
+          <Team team={bottomCandidates.join("/")} seed={openingSeeds[0]??null} gameNum={g} scoreVal={null}/>
         ):(
           <Team team={bottom} seed={seedB} gameNum={g} scoreVal={r?.scores?.[1]}/>
         )}
         {r?.broadcaster&&r.live&&!r.final&&<BroadcasterBadge name={r.broadcaster}/>}
         {r?.startDate&&!r.final&&!r.live&&(
           <div style={{display:"flex",alignItems:"center",gap:4,marginTop:3,flexWrap:"wrap"}}>
-            <span style={{fontFamily:FONTS.mono,fontSize:12,color:C.textLight,letterSpacing:0.5}}>
+            <span style={{fontFamily:FONTS.mono,fontSize:12,color:"rgba(255,255,255,0.7)",letterSpacing:0.5}}>
               {fmtDate(r.startDate)}{r.hasStartTime?` · ${fmtTime(r.startTime)}`:""}
             </span>
             {r.broadcaster&&<BroadcasterBadge name={r.broadcaster}/>}
@@ -1082,16 +1134,16 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
     <Card style={{
       overflow:"auto",padding:14,
       background:`
-        radial-gradient(ellipse 140px 100px at 50% 50%, rgba(100,200,140,0.25) 0%, transparent 70%),
+        radial-gradient(circle 52px at 50% 50%, transparent 0%, transparent 50px, rgba(255,255,255,0.35) 50px, rgba(255,255,255,0.35) 53px, transparent 53px),
+        radial-gradient(circle 44px at 10.5% 50%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.28) 90%, rgba(255,255,255,0.28) 94%, transparent 100%),
+        radial-gradient(circle 44px at 89.5% 50%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.28) 90%, rgba(255,255,255,0.28) 94%, transparent 100%),
+        linear-gradient(90deg, transparent 49.7%, rgba(255,255,255,0.45) 49.7%, rgba(255,255,255,0.45) 50.3%, transparent 50.3%),
         linear-gradient(90deg,
-          transparent 49.3%, rgba(40,140,80,0.12) 49.3%,
-          rgba(40,140,80,0.12) 50.7%, transparent 50.7%
+          transparent 19.7%, rgba(255,255,255,0.22) 19.7%, rgba(255,255,255,0.22) 20.3%, transparent 20.3%,
+          transparent 79.7%, rgba(255,255,255,0.22) 79.7%, rgba(255,255,255,0.22) 80.3%, transparent 80.3%
         ),
-        linear-gradient(90deg,
-          transparent 23.5%, rgba(30,100,55,0.08) 23.5%, rgba(30,100,55,0.08) 25%, transparent 25%,
-          transparent 75%, rgba(30,100,55,0.08) 75%, rgba(30,100,55,0.08) 76.5%, transparent 76.5%
-        ),
-        linear-gradient(180deg, #ebf7ee 0%, #dff0e5 100%)
+        repeating-linear-gradient(180deg, rgba(0,0,0,0.035) 0%, rgba(0,0,0,0.035) 12.5%, transparent 12.5%, transparent 25%),
+        linear-gradient(180deg, #1b6033 0%, #154d28 100%)
       `,
     }}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gridTemplateRows:"1fr 1fr",gap:"0 10px",minWidth:1000}}>
@@ -1118,11 +1170,11 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
             const champBg=champElim?C.redBg:champ?C.lilacBg:"rgba(200,215,200,0.7)";
             return(
               <div style={{textAlign:"center",marginBottom:20}}>
-                <div style={{fontFamily:FONTS.display,fontSize:13,color:C.textMid,letterSpacing:"5px",marginBottom:8}}>🏆 CHAMPION</div>
+                <div style={{fontFamily:FONTS.display,fontSize:16,color:"rgba(255,255,255,0.8)",letterSpacing:"5px",marginBottom:10}}>🏆 CHAMPION</div>
                 <div style={{
-                  fontFamily:FONTS.display,fontSize:22,letterSpacing:2,
+                  fontFamily:FONTS.display,fontSize:34,letterSpacing:2,
                   color:champColor,
-                  padding:"12px 16px",minWidth:140,
+                  padding:"16px 22px",minWidth:180,
                   border:`2px solid ${champBorder}`,
                   background:champBg,
                   borderRadius:8,
@@ -1130,20 +1182,20 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
                   animation:champ&&!champElim?"champGlow 3s ease-in-out infinite":"none",
                   display:"flex",alignItems:"center",justifyContent:"center",gap:10,
                 }}>
-                  {champ&&<TeamLogo team={champ} size={28} style={champElim?{filter:"grayscale(1) opacity(0.5)"}:{}}/>}
+                  {champ&&<TeamLogo team={champ} size={36} style={champElim?{filter:"grayscale(1) opacity(0.5)"}:{}}/>}
                   <span style={{textDecoration:champElim?"line-through":"none"}}>{champ||"?"}</span>
                 </div>
-                {champ&&<div style={{fontFamily:FONTS.mono,fontSize:13,color:champElim?C.red:C.lilac,marginTop:6,letterSpacing:2,fontWeight:700}}>8 POINTS</div>}
+                {champ&&<div style={{fontFamily:FONTS.mono,fontSize:15,color:champElim?C.red:C.lilac,marginTop:8,letterSpacing:2,fontWeight:700}}>8 POINTS</div>}
               </div>
             );
           })()}
           <Game g={15}/>
           {(tiebreak!=null||setTiebreak)&&(
             <div style={{marginTop:12,display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
-              <span style={{fontFamily:FONTS.body,fontSize:11,fontWeight:700,color:C.textLight,letterSpacing:"2px",textTransform:"uppercase"}}>
+              <span style={{fontFamily:FONTS.body,fontSize:14,fontWeight:700,color:"rgba(255,255,255,0.8)",letterSpacing:"2px",textTransform:"uppercase"}}>
                 TIEBREAKER
               </span>
-              <span style={{fontFamily:FONTS.body,fontSize:10,color:C.textLight,letterSpacing:"1px",textAlign:"center"}}>
+              <span style={{fontFamily:FONTS.body,fontSize:13,color:"rgba(255,255,255,0.6)",letterSpacing:"1px",textAlign:"center"}}>
                 total goals · semis + final
               </span>
               {setTiebreak?(
@@ -1151,10 +1203,10 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
                   value={tiebreak||""}
                   onChange={e=>setTiebreak(e.target.value.replace(/\D/g,""))}
                   placeholder="0"
-                  style={{width:64,textAlign:"center",fontFamily:FONTS.mono,fontSize:20,fontWeight:700,marginTop:2}}
+                  style={{width:80,textAlign:"center",fontFamily:FONTS.mono,fontSize:28,fontWeight:700,marginTop:2}}
                 />
               ):(
-                <span style={{fontFamily:FONTS.mono,fontSize:20,fontWeight:700,color:C.navy,textAlign:"center"}}>
+                <span style={{fontFamily:FONTS.mono,fontSize:28,fontWeight:700,color:C.navy,textAlign:"center"}}>
                   {tiebreak||"—"}
                 </span>
               )}
@@ -1605,7 +1657,7 @@ function Standings({entries,results,viewBracket,setViewBracket}){
       <Card style={{padding:0,overflow:"hidden",borderLeftColor:C.navy,
         background:`
           radial-gradient(ellipse 140px 100px at 50% 50%, rgba(100,200,140,0.15) 0%, transparent 70%),
-          linear-gradient(180deg, #ebf7ee 0%, #dff0e5 100%)
+          linear-gradient(180deg, #ebf7ee 0%, #daeee0 100%)
         `,
       }}>
         {tbGoals!==null&&(
