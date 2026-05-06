@@ -1014,7 +1014,7 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
     if(!team) return(
       <div style={{
         padding:"6px 10px",fontSize:15,color:C.textLight,fontStyle:"italic",
-        background:"rgba(200,215,200,0.7)",borderRadius:6,marginBottom:2,minWidth:140,
+        background:"#2a4a36",borderRadius:6,marginBottom:2,minWidth:140,
         border:`1px dashed ${C.border}`,textAlign:"center",fontFamily:FONTS.body,
       }}>TBD</div>
     );
