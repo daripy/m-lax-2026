@@ -60,6 +60,10 @@ const POINTS = [0,1,1,1,1,1,1,1,1,2,2,2,2,4,4,8];
 const MAX_PTS = POINTS.reduce((a,b)=>a+b,0);
 const ROUND_LABEL = g => g<=8?"First Round":g<=12?"Quarterfinals":g<=14?"Semifinals":"Championship";
 
+// Brackets stay locked until first-round games actually begin (May 9).
+// This prevents premature unlock if the API returns stale/early data.
+const FIRST_ROUND_MS = new Date("2026-05-09T00:00:00-04:00").getTime();
+
 /* posIds 101-116 are the opening round — we skip them and map only First Round onwards */
 const POS_TO_GAME = {
   201:1, 202:2, 203:3, 204:4, 205:5, 206:6, 207:7, 208:8,
@@ -619,8 +623,8 @@ export default function App(){
   const displayEntries=previewMode==="empty"?[]:previewMode==="entries"||previewMode==="live"?MOCK_ENTRIES:entries;
   const displayResults=previewMode==="live"?MOCK_RESULTS:previewMode==="entries"||previewMode==="empty"?{}:results;
 
-  const started=Object.values(displayResults).some(r=>r.final||r.live);
-  const anyLive=Object.values(displayResults).some(r=>r.live);
+  const started=Date.now()>=FIRST_ROUND_MS&&Object.values(displayResults).some(r=>r.final||r.live);
+  const anyLive=Date.now()>=FIRST_ROUND_MS&&Object.values(displayResults).some(r=>r.live);
 
   const handleSubmit=async(entry,{isEdit=false}={})=>{
     saveDraft(entry);
@@ -1566,7 +1570,7 @@ function MessageBoard({messages,onPost,onDelete,tableMissing}){
    ═══════════════════════════════════════════════════ */
 function Standings({entries,results,started,viewBracket,setViewBracket}){
   const eliminated=getEliminated(results);
-  const hasResults=Object.values(results).some(r=>r.final||r.live);
+  const hasResults=Date.now()>=FIRST_ROUND_MS&&Object.values(results).some(r=>r.final||r.live);
   const[expanded,setExpanded]=useState(null);
   const[sortCol,setSortCol]=useState("Pts");
   const[sortDir,setSortDir]=useState("desc");
@@ -1787,7 +1791,7 @@ function BrowseBrackets({entries,results,started}){
   const[selected,setSelected]=useState("");
   const entry=sorted.find(e=>e.name===selected)||null;
   const eliminated=getEliminated(results);
-  const hasResults=Object.values(results).some(r=>r.final||r.live);
+  const hasResults=Date.now()>=FIRST_ROUND_MS&&Object.values(results).some(r=>r.final||r.live);
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
