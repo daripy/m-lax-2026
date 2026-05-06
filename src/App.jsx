@@ -623,8 +623,9 @@ export default function App(){
   const displayEntries=previewMode==="empty"?[]:previewMode==="entries"||previewMode==="live"?MOCK_ENTRIES:entries;
   const displayResults=previewMode==="live"?MOCK_RESULTS:previewMode==="entries"||previewMode==="empty"?{}:results;
 
-  const started=Date.now()>=FIRST_ROUND_MS&&Object.values(displayResults).some(r=>r.final||r.live);
-  const anyLive=Date.now()>=FIRST_ROUND_MS&&Object.values(displayResults).some(r=>r.live);
+  const pastLockDate=previewMode==="live"||Date.now()>=FIRST_ROUND_MS;
+  const started=pastLockDate&&Object.values(displayResults).some(r=>r.final||r.live);
+  const anyLive=pastLockDate&&Object.values(displayResults).some(r=>r.live);
 
   const handleSubmit=async(entry,{isEdit=false}={})=>{
     saveDraft(entry);
@@ -1570,7 +1571,7 @@ function MessageBoard({messages,onPost,onDelete,tableMissing}){
    ═══════════════════════════════════════════════════ */
 function Standings({entries,results,started,viewBracket,setViewBracket}){
   const eliminated=getEliminated(results);
-  const hasResults=Date.now()>=FIRST_ROUND_MS&&Object.values(results).some(r=>r.final||r.live);
+  const hasResults=started;
   const[expanded,setExpanded]=useState(null);
   const[sortCol,setSortCol]=useState("Pts");
   const[sortDir,setSortDir]=useState("desc");
@@ -1791,7 +1792,7 @@ function BrowseBrackets({entries,results,started}){
   const[selected,setSelected]=useState("");
   const entry=sorted.find(e=>e.name===selected)||null;
   const eliminated=getEliminated(results);
-  const hasResults=Date.now()>=FIRST_ROUND_MS&&Object.values(results).some(r=>r.final||r.live);
+  const hasResults=started;
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
