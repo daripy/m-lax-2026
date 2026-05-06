@@ -107,19 +107,19 @@ const LOGOS = {
   "Penn St.":        "https://a.espncdn.com/i/teamlogos/ncaa/500/213.png",
   "Virginia":        "https://a.espncdn.com/i/teamlogos/ncaa/500/258.png",
   "Georgetown":      "https://a.espncdn.com/i/teamlogos/ncaa/500/46.png",
-  "Richmond":        "https://a.espncdn.com/i/teamlogos/ncaa/500/252.png",
+  "Richmond":        "https://a.espncdn.com/i/teamlogos/ncaa/500/257.png",
   "Duke":            "https://a.espncdn.com/i/teamlogos/ncaa/500/150.png",
   "Notre Dame":      "https://a.espncdn.com/i/teamlogos/ncaa/500/87.png",
   "Robert Morris":   "https://a.espncdn.com/i/teamlogos/ncaa/500/2523.png",
   "Jacksonville":    "https://a.espncdn.com/i/teamlogos/ncaa/500/294.png",
   "Cornell":         "https://a.espncdn.com/i/teamlogos/ncaa/500/172.png",
-  "Johns Hopkins":   "https://a.espncdn.com/i/teamlogos/ncaa/500/573.png",
+  "Johns Hopkins":   "https://a.espncdn.com/i/teamlogos/ncaa/500/118.png",
   "Syracuse":        "https://a.espncdn.com/i/teamlogos/ncaa/500/183.png",
   "Yale":            "https://a.espncdn.com/i/teamlogos/ncaa/500/43.png",
   "North Carolina":  "https://a.espncdn.com/i/teamlogos/ncaa/500/153.png",
   "UAlbany":         "https://a.espncdn.com/i/teamlogos/ncaa/500/399.png",
   "Army West Point": "https://a.espncdn.com/i/teamlogos/ncaa/500/349.png",
-  "Marist":          "https://a.espncdn.com/i/teamlogos/ncaa/500/160.png",
+  "Marist":          "https://a.espncdn.com/i/teamlogos/ncaa/500/2368.png",
   "Stony Brook":     "https://a.espncdn.com/i/teamlogos/ncaa/500/2571.png",
 };
 
@@ -711,8 +711,8 @@ export default function App(){
         {!loading&&view==="master"&&<MasterBracket results={displayResults} entries={displayEntries}/>}
         {!loading&&view==="bracket"&&<PickForm onSubmit={handleSubmit} entries={displayEntries} started={started} results={displayResults}/>}
         {!loading&&view==="edit"&&<EditBracket onSubmit={handleSubmit} entries={displayEntries} started={started} results={displayResults}/>}
-        {!loading&&view==="standings"&&<Standings entries={displayEntries} results={displayResults} viewBracket={viewBracket} setViewBracket={setViewBracket}/>}
-        {!loading&&view==="browse"&&<BrowseBrackets entries={displayEntries} results={displayResults}/>}
+        {!loading&&view==="standings"&&<Standings entries={displayEntries} results={displayResults} started={started} viewBracket={viewBracket} setViewBracket={setViewBracket}/>}
+        {!loading&&view==="browse"&&<BrowseBrackets entries={displayEntries} results={displayResults} started={started}/>}
         {!loading&&view==="chat"&&<MessageBoard messages={messages} onPost={async(author,body)=>{const ok=await postMessage(author,body);if(ok)await refreshMessages();return ok;}} onDelete={isAdmin?async(id)=>{await deleteMessage(id);await refreshMessages();}:null} tableMissing={msgTableMissing}/>}
         {!loading&&view==="rules"&&<Rules/>}
         {!loading&&view==="manage"&&isAdmin&&<Manage entries={displayEntries} onDelete={handleDelete} onRefresh={refresh}/>}
@@ -954,8 +954,41 @@ function MasterBracket({results,entries}){
 /* ═══════════════════════════════════════════════════
    BRACKET VISUALIZATION
    ═══════════════════════════════════════════════════ */
+const FIELD_BG_LANDSCAPE=`
+  radial-gradient(circle 52px at 50% 50%, transparent 0%, transparent 50px, rgba(255,255,255,0.35) 50px, rgba(255,255,255,0.35) 53px, transparent 53px),
+  radial-gradient(circle 44px at 10.5% 50%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.28) 90%, rgba(255,255,255,0.28) 94%, transparent 100%),
+  radial-gradient(circle 44px at 89.5% 50%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.28) 90%, rgba(255,255,255,0.28) 94%, transparent 100%),
+  linear-gradient(90deg, transparent 49.7%, rgba(255,255,255,0.45) 49.7%, rgba(255,255,255,0.45) 50.3%, transparent 50.3%),
+  linear-gradient(90deg, transparent 19.7%, rgba(255,255,255,0.22) 19.7%, rgba(255,255,255,0.22) 20.3%, transparent 20.3%, transparent 79.7%, rgba(255,255,255,0.22) 79.7%, rgba(255,255,255,0.22) 80.3%, transparent 80.3%),
+  repeating-linear-gradient(180deg, rgba(0,0,0,0.035) 0%, rgba(0,0,0,0.035) 12.5%, transparent 12.5%, transparent 25%),
+  linear-gradient(180deg, #1b6033 0%, #154d28 100%)
+`.trim();
+
+const FIELD_BG_PORTRAIT=`
+  radial-gradient(circle 52px at 50% 50%, transparent 0%, transparent 50px, rgba(255,255,255,0.35) 50px, rgba(255,255,255,0.35) 53px, transparent 53px),
+  radial-gradient(circle 44px at 50% 10.5%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.28) 90%, rgba(255,255,255,0.28) 94%, transparent 100%),
+  radial-gradient(circle 44px at 50% 89.5%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.28) 90%, rgba(255,255,255,0.28) 94%, transparent 100%),
+  linear-gradient(180deg, transparent 49.7%, rgba(255,255,255,0.45) 49.7%, rgba(255,255,255,0.45) 50.3%, transparent 50.3%),
+  linear-gradient(180deg, transparent 19.7%, rgba(255,255,255,0.22) 19.7%, rgba(255,255,255,0.22) 20.3%, transparent 20.3%, transparent 79.7%, rgba(255,255,255,0.22) 79.7%, rgba(255,255,255,0.22) 80.3%, transparent 80.3%),
+  repeating-linear-gradient(90deg, rgba(0,0,0,0.035) 0%, rgba(0,0,0,0.035) 12.5%, transparent 12.5%, transparent 25%),
+  linear-gradient(90deg, #1b6033 0%, #154d28 100%)
+`.trim();
+
 function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entries,noPickColors}){
   const eliminated=getEliminated(results);
+  const cardRef=useRef(null);
+  const[fieldBg,setFieldBg]=useState(FIELD_BG_LANDSCAPE);
+
+  useEffect(()=>{
+    const el=cardRef.current;
+    if(!el)return;
+    const ro=new ResizeObserver(([entry])=>{
+      const{width,height}=entry.contentRect;
+      setFieldBg(height>width?FIELD_BG_PORTRAIT:FIELD_BG_LANDSCAPE);
+    });
+    ro.observe(el);
+    return()=>ro.disconnect();
+  },[]);
 
   const pickPct=useMemo(()=>{
     if(!entries||entries.length===0) return {};
@@ -994,16 +1027,15 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
     // Highlight selected pick in round 1 interactive mode (esp. for opening candidates)
     const isSelected=interactive&&isRound1&&!rw&&eq(team,picks[gameNum]);
 
-    let bg=C.bgCard,border=C.border,color=C.text,weight=400;
+    let bg="#1e3a28",border="rgba(255,255,255,0.15)",color="#fff",weight=400;
     if(isRound1){
       if(correct){weight=700;}
-      else if(isSelected){bg=C.navyBg;border=C.navyBorder;color=C.navy;weight=700;}
+      else if(isSelected){weight=700;border="rgba(255,255,255,0.5)";}
     } else if(!noPickColors){
-      if(teamMadeItHere)              {bg=C.greenBg;border=C.greenBorder;color=C.green;}
-      else if(feederPlayed||deadPick)  {bg=C.redBg;border=C.redBorder;color=C.red;}
+      if(teamMadeItHere)              {bg="#27ae60";border="#1e8449";color="#fff";}
+      else if(feederPlayed||deadPick)  {bg="rgba(180,30,30,0.85)";border="#c0392b";color="#fff";}
       // Interactive pick mode: use opaque white so text is readable on dark field background
       else if(interactive)             {bg=C.bgCard;border=C.navyBorder;color=C.text;weight=600;}
-      else                             {bg=C.navyBg;border=C.navyBorder;color=C.navy;weight=700;}
     }
     if(!isRound1&&rw){weight=correct?700:400;}
 
@@ -1018,6 +1050,7 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
         cursor:interactive?"pointer":"default",
         display:"flex",flexDirection:"column",justifyContent:"flex-start",
         minWidth:140,fontFamily:FONTS.body,
+        boxShadow:isRound1&&isSelected&&!rw?"inset 0 0 0 2px #27ae60":undefined,
       }}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{display:"flex",alignItems:"center",gap:6}}>
@@ -1033,10 +1066,10 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
             ):(
               <TeamLogo team={team} size={18} style={{filter:logoFilter}}/>
             )}
-            {seed!=null&&<span style={{color:seed<=8?C.gold:C.textLight,fontSize:seed<=8?12:11,fontWeight:seed<=8?800:600,fontFamily:FONTS.mono,minWidth:16}}>{seed}</span>}
+            {seed!=null&&<span style={{color:seed<=8?C.gold:"rgba(255,255,255,0.55)",fontSize:seed<=8?12:11,fontWeight:seed<=8?800:600,fontFamily:FONTS.mono,minWidth:16}}>{seed}</span>}
             <span style={{textDecoration:strikeThrough?"line-through":"none",opacity:dim?0.4:1}}>{team}</span>
             {pickPct[gameNum]?.[team]!=null&&(
-              <span style={{fontSize:11,fontWeight:600,fontFamily:FONTS.mono,color:C.textLight,opacity:dim?0.4:1}}>
+              <span style={{fontSize:11,fontWeight:600,fontFamily:FONTS.mono,color:"rgba(255,255,255,0.6)",opacity:dim?0.4:1}}>
                 {pickPct[gameNum][team]}%
               </span>
             )}
@@ -1045,8 +1078,8 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
             {scoreVal!=null&&(
               <span style={{fontFamily:FONTS.mono,fontSize:14,padding:"1px 5px",borderRadius:1,background:C.bgInset,color:C.text}}>{scoreVal}</span>
             )}
-            {!noPickColors&&!isRound1&&teamMadeItHere&&<span style={{color:C.green,fontSize:12}}>✓</span>}
-            {!noPickColors&&!isRound1&&(deadPick||(feederPlayed&&!teamMadeItHere))&&<span style={{color:C.red,fontSize:12}}>✗</span>}
+            {!noPickColors&&!isRound1&&teamMadeItHere&&<span style={{color:"#fff",fontSize:12}}>✓</span>}
+            {!noPickColors&&!isRound1&&(deadPick||(feederPlayed&&!teamMadeItHere))&&<span style={{color:"#fff",fontSize:12}}>✗</span>}
           </span>
         </div>
         {combinedParts&&isRound1&&(
@@ -1054,9 +1087,9 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
         )}
         {!noPickColors&&!isRound1&&feederPlayed&&!teamMadeItHere&&feederWinner&&(
           <div style={{
-            marginTop:3,paddingTop:3,borderTop:`1px solid ${C.border}`,
+            marginTop:3,paddingTop:3,borderTop:`1px solid rgba(255,255,255,0.2)`,
             display:"flex",alignItems:"center",gap:5,
-            fontSize:13,color:C.textLight,fontWeight:500,fontFamily:FONTS.body,
+            fontSize:13,color:"rgba(255,255,255,0.7)",fontWeight:500,fontFamily:FONTS.body,
           }}>
             <TeamLogo team={feederWinner} size={14} style={{filter:"grayscale(0.3) opacity(0.7)"}}/>
             <span>{feederWinner}</span>
@@ -1131,21 +1164,8 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
   };
 
   return(
-    <Card style={{
-      overflow:"auto",padding:14,
-      background:`
-        radial-gradient(circle 52px at 50% 50%, transparent 0%, transparent 50px, rgba(255,255,255,0.35) 50px, rgba(255,255,255,0.35) 53px, transparent 53px),
-        radial-gradient(circle 44px at 10.5% 50%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.28) 90%, rgba(255,255,255,0.28) 94%, transparent 100%),
-        radial-gradient(circle 44px at 89.5% 50%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.28) 90%, rgba(255,255,255,0.28) 94%, transparent 100%),
-        linear-gradient(90deg, transparent 49.7%, rgba(255,255,255,0.45) 49.7%, rgba(255,255,255,0.45) 50.3%, transparent 50.3%),
-        linear-gradient(90deg,
-          transparent 19.7%, rgba(255,255,255,0.22) 19.7%, rgba(255,255,255,0.22) 20.3%, transparent 20.3%,
-          transparent 79.7%, rgba(255,255,255,0.22) 79.7%, rgba(255,255,255,0.22) 80.3%, transparent 80.3%
-        ),
-        repeating-linear-gradient(180deg, rgba(0,0,0,0.035) 0%, rgba(0,0,0,0.035) 12.5%, transparent 12.5%, transparent 25%),
-        linear-gradient(180deg, #1b6033 0%, #154d28 100%)
-      `,
-    }}>
+    <div ref={cardRef}>
+    <Card className="bracket-field" style={{overflow:"auto",padding:14,background:fieldBg}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gridTemplateRows:"1fr 1fr",gap:"0 10px",minWidth:1000}}>
 
         <div style={{gridRow:"1",gridColumn:"1",display:"flex",flexDirection:"column",justifyContent:"center",minHeight:320}}>
@@ -1165,9 +1185,9 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
           {(()=>{
             const champ=picks[15];
             const champElim=champ&&eliminated.has(norm(champ));
-            const champColor=champElim?C.red:champ?C.lilac:C.textLight;
-            const champBorder=champElim?C.redBorder:champ?C.lilacBorder:C.border;
-            const champBg=champElim?C.redBg:champ?C.lilacBg:"rgba(200,215,200,0.7)";
+            const champColor=champElim?C.red:champ?"#fff":C.textLight;
+            const champBorder=champElim?C.redBorder:champ?C.redDark:C.border;
+            const champBg=champElim?C.redBg:champ?C.redDark:"rgba(200,215,200,0.7)";
             return(
               <div style={{textAlign:"center",marginBottom:20}}>
                 <div style={{fontFamily:FONTS.display,fontSize:16,color:"rgba(255,255,255,0.8)",letterSpacing:"5px",marginBottom:10}}>🏆 CHAMPION</div>
@@ -1178,14 +1198,14 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
                   border:`2px solid ${champBorder}`,
                   background:champBg,
                   borderRadius:8,
-                  boxShadow:champ&&!champElim?`0 0 20px ${C.lilacBorder}`:"none",
+                  boxShadow:champ&&!champElim?`0 0 24px rgba(30,132,73,0.6)`:"none",
                   animation:champ&&!champElim?"champGlow 3s ease-in-out infinite":"none",
                   display:"flex",alignItems:"center",justifyContent:"center",gap:10,
                 }}>
-                  {champ&&<TeamLogo team={champ} size={36} style={champElim?{filter:"grayscale(1) opacity(0.5)"}:{}}/>}
+                  {champ&&<TeamLogo team={champ} size={36} style={champElim?{filter:"grayscale(1) opacity(0.5)"}:{filter:"brightness(0) invert(1)"}}/>}
                   <span style={{textDecoration:champElim?"line-through":"none"}}>{champ||"?"}</span>
                 </div>
-                {champ&&<div style={{fontFamily:FONTS.mono,fontSize:15,color:champElim?C.red:C.lilac,marginTop:8,letterSpacing:2,fontWeight:700}}>8 POINTS</div>}
+                {champ&&<div style={{fontFamily:FONTS.mono,fontSize:15,color:champElim?C.red:"#fff",marginTop:8,letterSpacing:2,fontWeight:700}}>8 POINTS</div>}
               </div>
             );
           })()}
@@ -1228,6 +1248,7 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
         </div>
       </div>
     </Card>
+    </div>
   );
 }
 
@@ -1543,7 +1564,7 @@ function MessageBoard({messages,onPost,onDelete,tableMissing}){
 /* ═══════════════════════════════════════════════════
    STANDINGS
    ═══════════════════════════════════════════════════ */
-function Standings({entries,results,viewBracket,setViewBracket}){
+function Standings({entries,results,started,viewBracket,setViewBracket}){
   const eliminated=getEliminated(results);
   const hasResults=Object.values(results).some(r=>r.final||r.live);
   const[expanded,setExpanded]=useState(null);
@@ -1581,6 +1602,18 @@ function Standings({entries,results,viewBracket,setViewBracket}){
   },[entries,results,eliminated,sortCol,sortDir]);
 
   const rankColors={1:C.gold,2:"#a0a5b0",3:"#b87333"};
+
+  if(viewBracket&&!started){
+    return(
+      <div>
+        <button onClick={()=>setViewBracket(null)} style={{...secondaryBtn,marginBottom:16}}>← BACK TO STANDINGS</button>
+        <Card style={{textAlign:"center",padding:"40px 20px",borderLeftColor:C.gold}}>
+          <div style={{fontFamily:FONTS.display,fontSize:24,color:C.navy,letterSpacing:"3px",marginBottom:8}}>BRACKETS LOCKED</div>
+          <div style={{color:C.textLight,fontSize:14}}>Other brackets are hidden until games begin.</div>
+        </Card>
+      </div>
+    );
+  }
 
   if(viewBracket){
     const e=entries.find(x=>x.name===viewBracket);
@@ -1749,7 +1782,7 @@ function Standings({entries,results,viewBracket,setViewBracket}){
 /* ═══════════════════════════════════════════════════
    BROWSE BRACKETS
    ═══════════════════════════════════════════════════ */
-function BrowseBrackets({entries,results}){
+function BrowseBrackets({entries,results,started}){
   const sorted=[...entries].sort((a,b)=>a.name.localeCompare(b.name));
   const[selected,setSelected]=useState("");
   const entry=sorted.find(e=>e.name===selected)||null;
@@ -1758,50 +1791,60 @@ function BrowseBrackets({entries,results}){
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      <Card style={{padding:"20px 24px"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-          <select
-            value={selected}
-            onChange={e=>setSelected(e.target.value)}
-            style={{
-              fontFamily:FONTS.mono,fontSize:15,padding:"8px 12px",
-              border:`1.5px solid rgba(100,180,130,0.4)`,borderRadius:6,
-              background:"rgba(255,255,255,0.6)",color:C.text,cursor:"pointer",minWidth:220,
-            }}
-          >
-            <option value="">— pick a bracket —</option>
-            {sorted.map(e=>(
-              <option key={e.name} value={e.name}>{e.name}</option>
-            ))}
-          </select>
-        </div>
-      </Card>
-
-      {entry&&(
-        <div>
-          <Card style={{marginBottom:14,padding:"16px 20px",borderLeftColor:C.lilac}}>
-            <div style={{fontFamily:FONTS.display,fontSize:32,color:C.navy,letterSpacing:2,marginBottom:6}}>{entry.name}</div>
-            <div style={{fontSize:16,fontFamily:FONTS.display,color:C.textMid,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",letterSpacing:0.5}}>
-              <span>Champion:</span>
-              <TeamLogo team={entry.picks[15]} size={18}/>
-              <strong style={{color:C.red,fontWeight:700}}>{entry.picks[15]}</strong>
-              {hasResults&&(()=>{
-                const sc=scoreEntry(entry,results);
-                const cElim=eliminated.has(norm(entry.picks[15]));
-                return(<>
-                  <span style={{color:C.border}}>·</span>
-                  <span>Pts: <strong style={{color:C.red}}>{sc.total}</strong></span>
-                  <span style={{color:C.border}}>·</span>
-                  <span>Max: <strong style={{color:C.red}}>{sc.maxPossible}</strong></span>
-                  {cElim&&<span style={{fontSize:13,color:C.red,fontWeight:700}}>· Champion eliminated</span>}
-                </>);
-              })()}
-              <span style={{color:C.border}}>·</span>
-              <span>Tiebreaker: <strong style={{color:C.red}}>{entry.tiebreak} goals</strong></span>
+      {!started&&(
+        <Card style={{textAlign:"center",padding:"24px 20px",borderLeftColor:C.gold}}>
+          <div style={{fontFamily:FONTS.display,fontSize:22,color:C.navy,letterSpacing:"3px",marginBottom:6}}>BRACKETS LOCKED</div>
+          <div style={{color:C.textLight,fontSize:14}}>Other brackets are hidden until games begin. Check back once the tournament starts!</div>
+        </Card>
+      )}
+      {started&&(
+        <>
+          <Card style={{padding:"20px 24px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+              <select
+                value={selected}
+                onChange={e=>setSelected(e.target.value)}
+                style={{
+                  fontFamily:FONTS.mono,fontSize:15,padding:"8px 12px",
+                  border:`1.5px solid rgba(100,180,130,0.4)`,borderRadius:6,
+                  background:"rgba(255,255,255,0.6)",color:C.text,cursor:"pointer",minWidth:220,
+                }}
+              >
+                <option value="">— pick a bracket —</option>
+                {sorted.map(e=>(
+                  <option key={e.name} value={e.name}>{e.name}</option>
+                ))}
+              </select>
             </div>
           </Card>
-          <BracketVis picks={entry.picks} onPick={null} results={results}/>
-        </div>
+
+          {entry&&(
+            <div>
+              <Card style={{marginBottom:14,padding:"16px 20px",borderLeftColor:C.lilac}}>
+                <div style={{fontFamily:FONTS.display,fontSize:32,color:C.navy,letterSpacing:2,marginBottom:6}}>{entry.name}</div>
+                <div style={{fontSize:16,fontFamily:FONTS.display,color:C.textMid,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",letterSpacing:0.5}}>
+                  <span>Champion:</span>
+                  <TeamLogo team={entry.picks[15]} size={18}/>
+                  <strong style={{color:C.red,fontWeight:700}}>{entry.picks[15]}</strong>
+                  {hasResults&&(()=>{
+                    const sc=scoreEntry(entry,results);
+                    const cElim=eliminated.has(norm(entry.picks[15]));
+                    return(<>
+                      <span style={{color:C.border}}>·</span>
+                      <span>Pts: <strong style={{color:C.red}}>{sc.total}</strong></span>
+                      <span style={{color:C.border}}>·</span>
+                      <span>Max: <strong style={{color:C.red}}>{sc.maxPossible}</strong></span>
+                      {cElim&&<span style={{fontSize:13,color:C.red,fontWeight:700}}>· Champion eliminated</span>}
+                    </>);
+                  })()}
+                  <span style={{color:C.border}}>·</span>
+                  <span>Tiebreaker: <strong style={{color:C.red}}>{entry.tiebreak} goals</strong></span>
+                </div>
+              </Card>
+              <BracketVis picks={entry.picks} onPick={null} results={results}/>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

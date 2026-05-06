@@ -150,6 +150,23 @@ tbody tr:hover td {
   transition: width 0.4s ease;
 }
 
+/* ── Bracket field background ── */
+/* Landscape / wide: field runs left → right */
+.bracket-field {
+  background:
+    radial-gradient(circle 52px at 50% 50%, transparent 0%, transparent 50px, rgba(255,255,255,0.35) 50px, rgba(255,255,255,0.35) 53px, transparent 53px),
+    radial-gradient(circle 44px at 10.5% 50%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.28) 90%, rgba(255,255,255,0.28) 94%, transparent 100%),
+    radial-gradient(circle 44px at 89.5% 50%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.28) 90%, rgba(255,255,255,0.28) 94%, transparent 100%),
+    linear-gradient(90deg, transparent 49.7%, rgba(255,255,255,0.45) 49.7%, rgba(255,255,255,0.45) 50.3%, transparent 50.3%),
+    linear-gradient(90deg,
+      transparent 19.7%, rgba(255,255,255,0.22) 19.7%, rgba(255,255,255,0.22) 20.3%, transparent 20.3%,
+      transparent 79.7%, rgba(255,255,255,0.22) 79.7%, rgba(255,255,255,0.22) 80.3%, transparent 80.3%
+    ),
+    repeating-linear-gradient(180deg, rgba(0,0,0,0.035) 0%, rgba(0,0,0,0.035) 12.5%, transparent 12.5%, transparent 25%),
+    linear-gradient(180deg, #1b6033 0%, #154d28 100%);
+}
+
+
 /* ── Tab nav — mobile spacing ── */
 @media (max-width: 640px) {
   .tab-btn {
