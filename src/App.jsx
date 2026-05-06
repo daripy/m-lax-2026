@@ -770,7 +770,7 @@ function PickForm({onSubmit,entries,started,results}){
     if(!name.trim())return alert("Please enter a bracket name.");
     if(!email.trim())return alert("Please enter your email.");
     if(!isComplete(picks))return alert("Please fill out all 15 picks.");
-    if(!tiebreak)return alert("Please enter a tiebreaker (total goals in both semifinals + championship).");
+    if(!tiebreak)return alert("Please enter a tiebreaker (total goals in the championship game).");
     if(chosenPin.length!==4)return alert("Please choose a 4-digit PIN.");
     const dup=entries.find(e=>e.name.trim().toLowerCase()===name.trim().toLowerCase());
     if(dup){setSaveError(`"${dup.name}" is already taken — choose a different name, or use the Edit Bracket tab at the top.`);return;}
@@ -1221,7 +1221,7 @@ function BracketVis({picks,onPick,results,interactive,tiebreak,setTiebreak,entri
                 TIEBREAKER
               </span>
               <span style={{fontFamily:FONTS.body,fontSize:13,color:"rgba(255,255,255,0.6)",letterSpacing:"1px",textAlign:"center"}}>
-                total goals · semis + final
+                total goals · championship game
               </span>
               {setTiebreak?(
                 <input
@@ -1657,11 +1657,9 @@ function Standings({entries,results,started,viewBracket,setViewBracket}){
     </Card>
   );
 
-  const semi1=results[13],semi2=results[14],champResult=results[15];
-  const allTBGamesFinal=semi1?.final&&semi2?.final&&champResult?.final;
+  const champResult=results[15];
+  const allTBGamesFinal=champResult?.final;
   const tbGoals=allTBGamesFinal?
-    (semi1.scores[0]||0)+(semi1.scores[1]||0)+
-    (semi2.scores[0]||0)+(semi2.scores[1]||0)+
     (champResult.scores[0]||0)+(champResult.scores[1]||0):null;
 
   if(!hasResults) return(
@@ -1700,7 +1698,7 @@ function Standings({entries,results,started,viewBracket,setViewBracket}){
       }}>
         {tbGoals!==null&&(
           <div style={{padding:"12px 20px",background:"rgba(184,140,16,0.12)",borderBottom:`1px solid rgba(184,140,16,0.25)`,fontFamily:FONTS.mono,fontSize:16,color:C.gold,letterSpacing:1,fontWeight:700,backdropFilter:"blur(4px)"}}>
-            🏆 SEMIS + CHAMPIONSHIP TOTAL GOALS: {tbGoals} — TIEBREAKER TARGET
+            🏆 CHAMPIONSHIP TOTAL GOALS: {tbGoals} — TIEBREAKER TARGET
           </div>
         )}
         <div style={{overflowX:"auto"}}>
@@ -1871,7 +1869,7 @@ function Rules(){
       `Maximum possible: ${MAX_PTS} points`,
     ]},
     {title:"OPENING ROUND NOTE",text:"Two opening round games are played May 6 (Marist/Stony Brook and Robert Morris/Jacksonville). Winners face the #1 and #2 seeds in the First Round. Pick any of these teams — if your pick wins the opening round AND the first round game, you get the point."},
-    {title:"TIEBREAKER",text:"Total combined goals scored in both semi-finals and the championship. Whoever guesses closest wins the tiebreaker."},
+    {title:"TIEBREAKER",text:"Total combined goals scored in the championship game. Whoever guesses closest wins the tiebreaker."},
     {title:"EDITING YOUR PICKS",text:"When you submit your bracket, you'll choose a 4-digit PIN. Use this PIN to edit your picks anytime before the deadline."},
   ];
   return(
